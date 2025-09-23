@@ -1,0 +1,67 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum TodoStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+}
+
+model User {
+  id             Int       @id @default(autoincrement())
+  email          String    @unique
+  password       String
+  name           String?
+  role           Role      @default(USER)
+  status         UserStatus @default(ACTIVE)
+  profilePicture String?
+  todosCreated   Todo[]    @relation("Creator")
+  todosAssigned  Todo[]    @relation("Assignee")
+  files          File[]    @relation("Uploader")
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+model Todo {
+  id          Int         @id @default(autoincrement())
+  title       String
+  description String?
+  status      TodoStatus  @default(TODO)
+  dueDate     DateTime?
+  creatorId   Int
+  creator     User        @relation("Creator", fields: [creatorId], references: [id])
+  assigneeId  Int?
+  assignee    User?       @relation("Assignee", fields: [assigneeId], references: [id])
+  files       File[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model File {
+  id         Int      @id @default(autoincrement())
+  filename   String
+  path       String
+  mimeType   String
+  size       Int
+  todoId     Int?
+  todo       Todo?    @relation(fields: [todoId], references: [id])
+  uploaderId Int
+  uploader   User     @relation("Uploader", fields: [uploaderId], references: [id])
+  createdAt  DateTime @default(now())
+}

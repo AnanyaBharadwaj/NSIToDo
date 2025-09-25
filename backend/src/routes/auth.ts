@@ -2,9 +2,9 @@ import express, { Request, Response, NextFunction } from "express";
 const validator = require("express-validator");
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../prisma";  
+
 const { check, validationResult } = validator;
-const prisma = new PrismaClient();
 const router = express.Router();
 
 const JWT_EXPIRY = "7d";

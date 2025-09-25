@@ -7,6 +7,9 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+//
+// Enums
+//
 enum Role {
   USER
   ADMIN
@@ -23,34 +26,56 @@ enum TodoStatus {
   DONE
 }
 
+//
+// Models
+//
 model User {
-  id             Int       @id @default(autoincrement())
-  email          String    @unique
+  id             Int             @id @default(autoincrement())
+  email          String          @unique
   password       String
   name           String?
-  role           Role      @default(USER)
-  status         UserStatus @default(ACTIVE)
+  role           Role            @default(USER)
+  status         UserStatus      @default(ACTIVE)
   profilePicture String?
-  todosCreated   Todo[]    @relation("Creator")
-  todosAssigned  Todo[]    @relation("Assignee")
-  files          File[]    @relation("Uploader")
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+
+  // Relations
+  todosCreated   Todo[]          @relation("Creator")
+  todosAssigned  TodoAssignee[]
+  files          File[]          @relation("Uploader")
+  notifications  Notification[]
+
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
 }
 
 model Todo {
-  id          Int         @id @default(autoincrement())
+  id          Int             @id @default(autoincrement())
   title       String
   description String?
-  status      TodoStatus  @default(TODO)
+  status      TodoStatus      @default(TODO)
   dueDate     DateTime?
+  order       Int             @default(0) // For drag-and-drop ordering
+
+  // Relations
   creatorId   Int
-  creator     User        @relation("Creator", fields: [creatorId], references: [id])
-  assigneeId  Int?
-  assignee    User?       @relation("Assignee", fields: [assigneeId], references: [id])
+  creator     User            @relation("Creator", fields: [creatorId], references: [id])
+  assignee   TodoAssignee[]
   files       File[]
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  notifications Notification[]
+
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
+
+model TodoAssignee {
+  id     Int  @id @default(autoincrement())
+  todoId Int
+  userId Int
+
+  todo   Todo @relation(fields: [todoId], references: [id])
+  user   User @relation(fields: [userId], references: [id])
+
+  @@unique([todoId, userId]) // Prevent duplicate assignments
 }
 
 model File {
@@ -59,9 +84,25 @@ model File {
   path       String
   mimeType   String
   size       Int
+
   todoId     Int?
   todo       Todo?    @relation(fields: [todoId], references: [id])
   uploaderId Int
   uploader   User     @relation("Uploader", fields: [uploaderId], references: [id])
+
   createdAt  DateTime @default(now())
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  message   String
+  read      Boolean  @default(false)
+
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+
+  todoId    Int?
+  todo      Todo?    @relation(fields: [todoId], references: [id])
+
+  createdAt DateTime @default(now())
 }

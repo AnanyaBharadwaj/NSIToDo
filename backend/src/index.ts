@@ -9,12 +9,13 @@ dotenv.config();
 const authRoutes = require("./routes/auth").default;
 const userRoutes = require("./routes/users").default;
 const uploadRoutes = require("./routes/uploads").default;
+const todosRoutes = require("./routes/todos").default; 
 
 // Middlewares
 const { errorHandler } = require("./middlewares/errorHandler");
 const { logger } = require("./logger");
 
-import type { Request, Response, NextFunction } from "express";
+import type { Request, Response } from "express";
 
 const app = express();
 
@@ -35,6 +36,7 @@ app.use(
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/uploads", uploadRoutes);
+app.use("/api/todos", todosRoutes); // 
 
 // Health endpoint
 app.get("/health", (_req: Request, res: Response) => {

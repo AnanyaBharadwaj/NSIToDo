@@ -14,3 +14,26 @@ export interface RegisterFormData {
   password: string;
   name?: string;
 }
+
+export interface FileAttachment {
+  id: number;
+  filename: string;
+  path: string;
+  mimetype: string;
+  size: number;
+}
+
+export interface TodoAssignee {
+  userId: number;
+  id: number;
+}
+
+export interface Todo {
+  id: number;
+  title: string;
+  description?: string;
+  dueDate?: string;
+  creatorId: number;
+  assignees: TodoAssignee[];
+  files: FileAttachment[];
+}

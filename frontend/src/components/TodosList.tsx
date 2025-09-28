@@ -8,12 +8,22 @@ interface TodosListProps {
 }
 
 export const TodosList: React.FC<TodosListProps> = ({ filter }) => {
-  const { data, isLoading, error } = useQuery<Todo[], Error>({
+  const { data, isLoading, error, refetch } = useQuery<Todo[], Error>({
     queryKey: ['todos', filter],
     queryFn: async () => {
-      const response = await api.get<Todo[]>('/todos', { params: { filter } });
-      return response.data;
+      // Call correct endpoint based on filter
+      if (filter === 'myTodos') {
+        const response = await api.get<Todo[]>('/todos/my');
+        console.log('Fetched my todos:', response.data); // debug
+        return response.data;
+      } else {
+        const response = await api.get<Todo[]>('/todos/assigned');
+        console.log('Fetched assigned todos:', response.data); // debug
+        return response.data;
+      }
     },
+    staleTime: 0, // never consider cache fresh
+    refetchOnWindowFocus: true, // always fetch when window is focused
   });
 
   const [checkedIds, setCheckedIds] = useState<number[]>([]);
@@ -67,7 +77,7 @@ export const TodosList: React.FC<TodosListProps> = ({ filter }) => {
                   rel="noopener noreferrer"
                   className="text-blue-600 underline text-sm"
                 >
-                  {file.name}
+                  {file.filename}
                 </a>
               ))}
             </div>

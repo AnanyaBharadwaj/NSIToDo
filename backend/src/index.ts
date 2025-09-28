@@ -15,7 +15,7 @@ const todosRoutes = require("./routes/todos").default;
 const { errorHandler } = require("./middlewares/errorHandler");
 const { logger } = require("./logger");
 
-import type { Request, Response } from "express";
+import type { NextFunction, Request, Response } from "express";
 
 const app = express();
 
@@ -32,11 +32,17 @@ app.use(
   })
 );
 
+// **Disable caching for all responses**
+app.use((req: Request, res: Response, next: NextFunction) => {
+  res.set("Cache-Control", "no-store");
+  next();
+});
+
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/uploads", uploadRoutes);
-app.use("/api/todos", todosRoutes); // 
+app.use("/api/todos", todosRoutes); 
 
 // Health endpoint
 app.get("/health", (_req: Request, res: Response) => {

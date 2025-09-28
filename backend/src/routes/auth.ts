@@ -87,7 +87,7 @@ router.post(
         role: user.role,
         avatar: user.profilePicture,
       };
-      res.json({ user: safeUser });
+      res.json({ user: safeUser, token });
     } catch (err) {
       next(err);
     }

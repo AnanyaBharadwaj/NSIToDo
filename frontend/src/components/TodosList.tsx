@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Todo } from '../types';
 import api from '../lib/api';
@@ -16,28 +16,65 @@ export const TodosList: React.FC<TodosListProps> = ({ filter }) => {
     },
   });
 
+  const [checkedIds, setCheckedIds] = useState<number[]>([]);
+
+  const handleToggle = (id: number) => {
+    setCheckedIds(prev =>
+      prev.includes(id) ? prev.filter(cid => cid !== id) : [...prev, id]
+    );
+  };
+
   if (isLoading) return <p>Loading...</p>;
   if (error) return <p>Error: {error.message}</p>;
 
   const todos: Todo[] = data ?? [];
 
   return (
-    <ul>
+    <div className="space-y-3">
+      {todos.length === 0 && <p className="text-gray-500">No todos yet.</p>}
+
       {todos.map(todo => (
-        <li key={todo.id}>
-          {todo.title} —{' '}
-          {todo.files?.[0] && (
-            <a
-              href={`/api/files/${todo.files[0].id}/download`}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Download File
-            </a>
+        <div
+          key={todo.id}
+          className="bg-white rounded-lg shadow-md p-4 flex flex-col gap-2 hover:shadow-lg transition"
+        >
+          <div className="flex justify-between items-start">
+            <h3 className="font-semibold text-lg">{todo.title}</h3>
+            <input
+              type="checkbox"
+              checked={checkedIds.includes(todo.id)}
+              onChange={() => handleToggle(todo.id)}
+            />
+          </div>
+
+          {todo.description && (
+            <p className="text-gray-700 text-sm">{todo.description}</p>
           )}
-        </li>
+
+          {todo.dueDate && (
+            <p className="text-gray-500 text-xs">
+              Due: {new Date(todo.dueDate).toLocaleDateString()}
+            </p>
+          )}
+
+          {todo.files?.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-1">
+              {todo.files.map(file => (
+                <a
+                  key={file.id}
+                  href={`/api/files/${file.id}/download`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 underline text-sm"
+                >
+                  {file.name}
+                </a>
+              ))}
+            </div>
+          )}
+        </div>
       ))}
-    </ul>
+    </div>
   );
 };
 

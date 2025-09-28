@@ -21,6 +21,7 @@ export interface FileAttachment {
   path: string;
   mimetype: string;
   size: number;
+  name: string;
 }
 
 export interface TodoAssignee {

@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useContext, useState } from "react";
 import { AuthContext } from "../context/AuthContext";
-import { NotificationsBell } from "../components/NotificationsBells"; 
+import { NotificationsBell } from "../components/NotificationsBells";
 
 interface UserWithAvatar {
   id: number;
@@ -36,12 +36,47 @@ export default function Navbar() {
   const typedUser = toUserWithAvatar(user);
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [navDropdownOpen, setNavDropdownOpen] = useState(false);
 
   return (
     <nav className="w-full bg-blue-700 text-white shadow-md">
       <div className="container mx-auto flex justify-between items-center py-4 px-6 relative">
-        <div className="flex-1"></div>
+        {/* Left side: Pages dropdown */}
+        <div className="relative">
+          <button
+            onClick={() => setNavDropdownOpen((prev) => !prev)}
+            className="px-4 py-2 rounded hover:bg-blue-600 transition"
+          >
+            Pages ▾
+          </button>
+          {navDropdownOpen && (
+            <div className="absolute left-0 mt-2 w-48 bg-white text-gray-900 rounded shadow-lg z-50">
+              <Link
+                href="/todosBoard"
+                className="block px-4 py-2 hover:bg-gray-200"
+                onClick={() => setNavDropdownOpen(false)}
+              >
+                Kanban Board
+              </Link>
+              <Link
+                href="/files"
+                className="block px-4 py-2 hover:bg-gray-200"
+                onClick={() => setNavDropdownOpen(false)}
+              >
+                Files
+              </Link>
+              <Link
+                href="/adminUsers"
+                className="block px-4 py-2 hover:bg-gray-200"
+                onClick={() => setNavDropdownOpen(false)}
+              >
+                Admin
+              </Link>
+            </div>
+          )}
+        </div>
 
+        {/* Logo */}
         <Link
           href="/"
           className="text-2xl font-bold tracking-wide text-center flex-1 flex items-center justify-center"
@@ -50,6 +85,7 @@ export default function Navbar() {
           <span className="ml-2">ToDo</span>
         </Link>
 
+        {/* Right side: User actions */}
         <div className="flex gap-4 flex-1 justify-end items-center">
           {!typedUser ? (
             <>

@@ -8,7 +8,7 @@ import { AdminUsers } from "@/components/AdminUsers";
 
 export default function AdminUsersPage() {
   return (
-    <ProtectedRoute>
+    <ProtectedRoute requiredRole="ADMIN">
       <div className="min-h-screen bg-gray-50 text-black flex flex-col">
         {/* Navbar */}
         <Navbar />

@@ -9,7 +9,11 @@ import {
   useSensors,
   closestCenter,
 } from "@dnd-kit/core";
-import { SortableContext, verticalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../lib/api";
@@ -53,7 +57,7 @@ const SortableTodo: React.FC<{ todo: Todo }> = ({ todo }) => {
   };
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners} id={todo.id.toString()}>
       <strong>{todo.title}</strong>
       {todo.description && <div style={{ fontSize: 12 }}>{todo.description}</div>}
     </div>
@@ -62,17 +66,14 @@ const SortableTodo: React.FC<{ todo: Todo }> = ({ todo }) => {
 
 export const TodosBoard: React.FC = () => {
   const queryClient = useQueryClient();
+  const sensors = useSensors(useSensor(PointerSensor));
 
   const { data: todos = [], isLoading } = useQuery<BackendTodo[], Error>({
     queryKey: ["todos"],
     queryFn: fetchTodos,
   });
 
-  const mutation = useMutation<
-    Todo,
-    Error,
-    { id: number; status: BackendTodo["status"] }
-  >({
+  const mutation = useMutation<Todo, Error, { id: number; status: BackendTodo["status"] }>({
     mutationFn: async (payload) => {
       console.log("Mutating todo:", payload);
       const { data } = await api.patch<Todo>(`/todos/${payload.id}/status`, payload);
@@ -85,11 +86,8 @@ export const TodosBoard: React.FC = () => {
     },
   });
 
-  const sensors = useSensors(useSensor(PointerSensor));
-
   if (isLoading) return <div>Loading...</div>;
 
-  // Normalize backend status to frontend status
   const normalizeStatus = (status: BackendTodo["status"]): Todo["status"] => {
     switch (status) {
       case "TODO":
@@ -103,12 +101,6 @@ export const TodosBoard: React.FC = () => {
     }
   };
 
-  const normalizedTodos: Todo[] = todos.map((t) => ({
-    ...t,
-    status: normalizeStatus(t.status),
-  }));
-
-  // Map frontend status back to backend for mutation
   const toBackendStatus = (status: Todo["status"]): BackendTodo["status"] => {
     switch (status) {
       case "todo":
@@ -119,6 +111,8 @@ export const TodosBoard: React.FC = () => {
         return "DONE";
     }
   };
+
+  const normalizedTodos: Todo[] = todos.map((t) => ({ ...t, status: normalizeStatus(t.status) }));
 
   // Group todos by status
   const columns: Record<Todo["status"], Todo[]> = {
@@ -133,15 +127,21 @@ export const TodosBoard: React.FC = () => {
     if (!over || active.id === over.id) return;
 
     const dragged = normalizedTodos.find((t) => t.id === Number(active.id));
-    const target = normalizedTodos.find((t) => t.id === Number(over.id));
-    if (!dragged || !target) return;
+    if (!dragged) return;
 
-    console.log("Drag ended:", { dragged, target });
+    const overElement = document.getElementById(over.id.toString());
+    const parentColumn = overElement?.closest("[data-status]") as HTMLElement;
+    if (!parentColumn?.dataset.status) return;
 
-    if (dragged.status !== target.status) {
-      const backendStatus = toBackendStatus(target.status);
-      console.log(`Updating todo ${dragged.id} to status ${backendStatus}`);
+    const targetColumnStatus = parentColumn.dataset.status as Todo["status"];
+    console.log("Drag ended:", { dragged, targetColumnStatus });
+
+    if (dragged.status !== targetColumnStatus) {
+      const backendStatus = toBackendStatus(targetColumnStatus);
+      console.log(`Updating todo ${dragged.id} to backend status ${backendStatus}`);
       mutation.mutate({ id: dragged.id, status: backendStatus });
+    } else {
+      // Optional: reorder in same column
     }
   };
 
@@ -149,20 +149,24 @@ export const TodosBoard: React.FC = () => {
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
       <div
         className="flex gap-4 w-full p-4"
-        style={{ backgroundColor: "#0B3D91", minHeight: "calc(100vh - 64px)" }} // dark blue background, full height minus navbar
+        style={{ backgroundColor: "#0B3D91", minHeight: "calc(100vh - 64px)" }}
       >
         {(["todo", "inprogress", "done"] as Todo["status"][]).map((status) => (
           <div
             key={status}
+            data-status={status}
             className="flex-1 p-4 rounded flex flex-col"
             style={{
               backgroundColor: "#0B3D91",
               boxShadow: "inset 0 0 5px rgba(0,0,0,0.5)",
-              minHeight: "100%", // ensures entire column height
+              minHeight: "100%",
             }}
           >
             <h3 className="font-bold text-lg mb-4 text-white">{status.toUpperCase()}</h3>
-            <SortableContext items={columns[status].map((t) => t.id)} strategy={verticalListSortingStrategy}>
+            <SortableContext
+              items={columns[status].map((t) => t.id)}
+              strategy={verticalListSortingStrategy}
+            >
               <div style={{ flexGrow: 1 }}>
                 {columns[status].map((todo) => (
                   <SortableTodo key={todo.id} todo={todo} />

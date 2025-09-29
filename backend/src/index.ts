@@ -48,7 +48,9 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
-app.use("/api/uploads", uploadRoutes);
+// Serve files in 'uploads/avatars' folder
+app.use('/api/uploads/avatars', express.static('uploads/avatars'));
+
 app.use("/api/todos", todosRoutes);
 app.use("/api/files", filesRoutes);
 app.use("/api/admin", adminRoutes);

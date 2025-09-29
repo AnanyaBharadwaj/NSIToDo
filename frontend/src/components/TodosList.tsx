@@ -1,60 +1,57 @@
-import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Todo } from '../types';
-import api from '../lib/api';
+"use client";
+
+import React from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Todo } from "../types";
+import api from "../lib/api";
+import Link from "next/link";
 
 interface TodosListProps {
-  filter: 'myTodos' | 'assignedTodos';
+  filter: "myTodos" | "assignedTodos";
 }
 
 export const TodosList: React.FC<TodosListProps> = ({ filter }) => {
-  const { data, isLoading, error, refetch } = useQuery<Todo[], Error>({
-    queryKey: ['todos', filter],
+  const { data, isLoading, error } = useQuery<Todo[], Error>({
+    queryKey: ["todos", filter],
     queryFn: async () => {
-      // Call correct endpoint based on filter
-      if (filter === 'myTodos') {
-        const response = await api.get<Todo[]>('/todos/my');
-        console.log('Fetched my todos:', response.data); // debug
+      if (filter === "myTodos") {
+        const response = await api.get<Todo[]>("/todos/my");
         return response.data;
       } else {
-        const response = await api.get<Todo[]>('/todos/assigned');
-        console.log('Fetched assigned todos:', response.data); // debug
+        const response = await api.get<Todo[]>("/todos/assigned");
         return response.data;
       }
     },
-    staleTime: 0, // never consider cache fresh
-    refetchOnWindowFocus: true, // always fetch when window is focused
+    staleTime: 0,
+    refetchOnWindowFocus: true,
   });
 
-  const [checkedIds, setCheckedIds] = useState<number[]>([]);
-
-  const handleToggle = (id: number) => {
-    setCheckedIds(prev =>
-      prev.includes(id) ? prev.filter(cid => cid !== id) : [...prev, id]
-    );
-  };
-
   if (isLoading) return <p>Loading...</p>;
-  if (error) return <p>Error: {error.message}</p>;
+  if (error) return <p className="text-red-500">Error: {error.message}</p>;
 
   const todos: Todo[] = data ?? [];
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {todos.length === 0 && <p className="text-gray-500">No todos yet.</p>}
 
-      {todos.map(todo => (
+      {todos.map((todo, index) => (
         <div
           key={todo.id}
-          className="bg-white rounded-lg shadow-md p-4 flex flex-col gap-2 hover:shadow-lg transition"
+          className="flex flex-col gap-2 p-4 border border-gray-300 rounded-lg hover:shadow-lg transition"
         >
-          <div className="flex justify-between items-start">
-            <h3 className="font-semibold text-lg">{todo.title}</h3>
-            <input
-              type="checkbox"
-              checked={checkedIds.includes(todo.id)}
-              onChange={() => handleToggle(todo.id)}
-            />
+          <div className="flex justify-between items-center">
+            <h3 className="font-semibold text-lg text-black">
+              {index + 1}.{" "}
+              <Link
+                href={`/todos/${todo.id}`}
+                className="hover:underline text-black"
+              >
+                {todo.title}
+              </Link>
+            </h3>
+
+            <TodoStatusBadge todoId={todo.id} />
           </div>
 
           {todo.description && (
@@ -68,14 +65,14 @@ export const TodosList: React.FC<TodosListProps> = ({ filter }) => {
           )}
 
           {todo.files?.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-1">
-              {todo.files.map(file => (
+            <div className="flex flex-wrap gap-2 mt-2">
+              {todo.files.map((file) => (
                 <a
                   key={file.id}
                   href={`/api/files/${file.id}/download`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-blue-600 underline text-sm"
+                  className="text-blue-600 underline text-sm hover:text-blue-800"
                 >
                   {file.filename}
                 </a>
@@ -85,6 +82,45 @@ export const TodosList: React.FC<TodosListProps> = ({ filter }) => {
         </div>
       ))}
     </div>
+  );
+};
+
+// Status badge component
+interface TodoStatusResponse {
+  status: string;
+}
+
+const TodoStatusBadge: React.FC<{ todoId: number }> = ({ todoId }) => {
+  const { data: status, isLoading } = useQuery<string, Error>({
+    queryKey: ["todo-status", todoId],
+    queryFn: async () => {
+      const response = await api.get<TodoStatusResponse>(`/todos/${todoId}/status`);
+      return response.data.status;
+    },
+    staleTime: 5000,
+  });
+
+  const getBadgeColor = (status: string) => {
+    switch (status) {
+      case "TODO":
+        return "bg-yellow-100 text-yellow-800";
+      case "IN_PROGRESS":
+        return "bg-blue-100 text-blue-800";
+      case "DONE":
+        return "bg-green-100 text-green-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  return (
+    <span
+      className={`px-3 py-1 text-xs font-semibold rounded-full ${
+        status ? getBadgeColor(status) : "bg-gray-100 text-gray-800"
+      }`}
+    >
+      {isLoading ? "Loading..." : status ?? "N/A"}
+    </span>
   );
 };
 

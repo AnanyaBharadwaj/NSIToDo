@@ -1,7 +1,7 @@
 "use client";
 
 import { useForm, SubmitHandler } from "react-hook-form";
-import { useContext } from "react";
+import { useContext, useState, useEffect } from "react";
 import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import { AuthContext } from "@/context/AuthContext";
@@ -47,16 +47,33 @@ export default function ProfilePage() {
 
   const typedUser = toUserWithAvatar(user);
 
-  const { register, handleSubmit } = useForm<AvatarFormData>();
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(
+    typedUser?.profilePicture ?? null
+  );
+  const [isUploading, setIsUploading] = useState(false);
+
+  useEffect(() => {
+    // Update local avatar URL when context changes
+    if (typedUser?.profilePicture) {
+      setAvatarUrl(typedUser.profilePicture + `?t=${Date.now()}`);
+    }
+  }, [typedUser?.profilePicture]);
+
+  const { register, handleSubmit, reset } = useForm<AvatarFormData>();
 
   const onSubmit: SubmitHandler<AvatarFormData> = async (data) => {
+    if (!data.avatar || data.avatar.length === 0) return;
+    setIsUploading(true);
+
     try {
       const fd = new FormData();
       fd.append("avatar", data.avatar[0]);
-      await fetch("/api/users/me/avatar", { method: "POST", body: fd }); // or api.post(...)
-      await fetchMe();
-      alert("Avatar uploaded successfully!");
+      await fetch("/api/users/me/avatar", { method: "POST", body: fd });
+      await fetchMe(); // refresh context
+      reset();
+      setIsUploading(false);
     } catch (err: unknown) {
+      setIsUploading(false);
       if (err instanceof Error) alert(err.message);
       else alert("Failed to upload avatar");
     }
@@ -74,13 +91,15 @@ export default function ProfilePage() {
           </h2>
 
           <div className="flex flex-col items-center gap-4">
-            {typedUser.profilePicture ? (
+            {avatarUrl ? (
               <Image
-                src={typedUser.profilePicture}
+                key={avatarUrl} // forces re-render
+                src={avatarUrl}
                 alt="Profile Picture"
                 width={120}
                 height={120}
-                className="rounded-full object-cover"
+                className="rounded-full object-cover transition-opacity duration-500"
+                style={{ opacity: isUploading ? 0.5 : 1 }}
               />
             ) : (
               <div className="w-28 h-28 bg-gray-300 dark:bg-gray-600 rounded-full flex items-center justify-center text-gray-700 dark:text-gray-300">
@@ -103,9 +122,10 @@ export default function ProfilePage() {
             />
             <button
               type="submit"
+              disabled={isUploading}
               className="w-full h-16 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition text-lg font-medium"
             >
-              Upload Avatar
+              {isUploading ? "Uploading..." : "Upload Avatar"}
             </button>
           </form>
         </div>

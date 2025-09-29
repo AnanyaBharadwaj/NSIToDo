@@ -29,6 +29,11 @@ export interface TodoAssignee {
   userId: number;
   id: number;
 }
+export interface TodoFile {
+  id: number;
+  filename: string;
+}
+
 
 export interface Todo {
   id: number;
@@ -38,4 +43,5 @@ export interface Todo {
   creatorId: number;
   assignees: TodoAssignee[];
   files: FileAttachment[];
+  status: "TODO" | "IN_PROGRESS" | "DONE";
 }

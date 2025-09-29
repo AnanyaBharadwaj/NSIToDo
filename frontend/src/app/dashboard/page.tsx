@@ -5,11 +5,14 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import Navbar from "@/components/Navbar";
 import { TodoForm } from "@/components/TodoForm";
 import TodosList from "@/components/TodosList";
+import { AdminUsers } from "@/components/AdminUsers";
 import { useQuery } from "@tanstack/react-query";
 import api from "@/lib/api";
+import Link from "next/link";
 
 export default function DashboardPage() {
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showAdmin, setShowAdmin] = useState(false);
 
   // Fetch users for assignees
   const { data: users = [] } = useQuery({
@@ -18,9 +21,10 @@ export default function DashboardPage() {
       const response = await api.get("/users");
       return response.data;
     },
+    // Ensure this only runs on client
+    enabled: typeof window !== "undefined",
   });
 
-  // Todo create success handler
   const handleTodoSuccess = () => setShowCreateForm(false);
 
   return (
@@ -29,7 +33,6 @@ export default function DashboardPage() {
         {/* Navbar */}
         <Navbar />
 
-        {/* Spacer after Navbar */}
         <div className="h-12" />
 
         {/* Create Todo Section */}
@@ -49,22 +52,60 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Spacer between sections */}
         <div className="h-12" />
 
         {/* Todos Section */}
         <div className="px-6 grid grid-cols-1 md:grid-cols-2 gap-10">
-          {/* My Todos */}
           <div className="bg-purple-100 border-2 border-purple-300 shadow-lg p-6 min-h-[30vh] -rotate-[0.5deg]">
             <h2 className="text-xl font-bold mb-4">My Todos</h2>
             <TodosList filter="myTodos" />
           </div>
 
-          {/* Assigned Todos */}
           <div className="bg-yellow-100 border-2 border-yellow-300 shadow-lg p-6 min-h-[30vh] rotate-[0.5deg]">
             <h2 className="text-xl font-bold mb-4">Assigned Todos</h2>
             <TodosList filter="assignedTodos" />
           </div>
+        </div>
+
+        <div className="h-12" />
+
+        {/* TodosBoard Navigation */}
+        <div className="px-6">
+          <Link
+            href="/todosBoard"
+            className="px-6 py-3 bg-green-600 text-white font-medium hover:bg-green-700 transition w-fit mb-4"
+          >
+            Go to Todos Board Page
+          </Link>
+        </div>
+
+        <div className="h-12" />
+
+        {/* AdminUsers Section */}
+        <div className="px-6">
+          <button
+            onClick={() => setShowAdmin((prev) => !prev)}
+            className="px-6 py-3 bg-red-600 text-white font-medium hover:bg-red-700 transition w-fit mb-4"
+          >
+            {showAdmin ? "Hide Admin Users" : "Show Admin Users"}
+          </button>
+          {showAdmin && (
+            <div className="bg-white border p-4 shadow-md rounded">
+              <AdminUsers />
+            </div>
+          )}
+        </div>
+
+        <div className="h-12" />
+
+        {/* Files Section */}
+        <div className="px-6">
+          <Link
+            href="/files"
+            className="px-6 py-3 bg-orange-600 text-white font-medium hover:bg-orange-700 transition w-fit"
+          >
+            Go to Files Page
+          </Link>
         </div>
       </div>
     </ProtectedRoute>

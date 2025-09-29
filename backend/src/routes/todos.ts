@@ -6,6 +6,10 @@ import {
   downloadFile,
   getMyTodos,
   getAssignedTodos,
+  updateTodoStatus,
+  reorderTodos,
+  getTodoStatus,
+  getAllTodoStatuses,
 } from '../controllers/todos';
 import { authMiddleware as auth } from '../middlewares/auth';
 
@@ -20,10 +24,22 @@ router.get('/my', auth, getMyTodos);
 // Get todos assigned to the logged-in user
 router.get('/assigned', auth, getAssignedTodos);
 
-// Get a single todo by ID (only accessible if creator, assignee, or admin)
+// Get all todos with status for the logged-in user
+router.get('/status', auth, getAllTodoStatuses); // <-- place before /:id/status to avoid conflicts
+
+// Get status of a single todo
+router.get('/:id/status', auth, getTodoStatus);
+
+// Get a single todo by ID
 router.get('/:id', auth, getTodoById);
 
 // Download a file attached to a todo
 router.get('/files/:id/download', auth, downloadFile);
+
+// Update status of a todo
+router.patch('/:id/status', auth, updateTodoStatus);
+
+// Reorder todos
+router.patch('/order', auth, reorderTodos);
 
 export default router;

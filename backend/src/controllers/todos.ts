@@ -1,9 +1,10 @@
+// backend/src/controllers/todos.ts
 import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../prisma';
 import fs from 'fs';
 import path from 'path';
+import { getIO } from '../socket'; // Use getIO instead of io
 
-// Extend request to include user from auth middleware
 interface AuthRequest extends Request {
   user?: { userId: number; role: string };
 }
@@ -20,7 +21,6 @@ export const createTodo = async (req: AuthRequest, res: Response, next: NextFunc
     if (!title || typeof title !== 'string') return res.status(400).json({ error: 'Title is required' });
 
     const created = await prisma.$transaction(async (tx) => {
-      // 1) Create the todo
       const todo = await tx.todo.create({
         data: {
           title,
@@ -30,33 +30,26 @@ export const createTodo = async (req: AuthRequest, res: Response, next: NextFunc
         },
       });
 
-      // 2) Parse assignees from FormData
+      // Parse assignees
       let assigneeArray: number[] = [];
       if (req.body.assignees) {
         if (typeof req.body.assignees === 'string') {
           try {
-            // Parse JSON string from frontend
             assigneeArray = JSON.parse(req.body.assignees).map((id: any) => Number(id));
-          } catch (e) {
-            assigneeArray = [];
-          }
+          } catch (e) { assigneeArray = []; }
         } else if (Array.isArray(req.body.assignees)) {
           assigneeArray = req.body.assignees.map((id: any) => Number(id));
         }
       }
 
-      // 3) Insert assignees into TodoAssignee table
       if (assigneeArray.length > 0) {
-        const assigneeData = assigneeArray.map((uid) => ({
-          todoId: todo.id,
-          userId: uid,
-        }));
+        const assigneeData = assigneeArray.map(uid => ({ todoId: todo.id, userId: uid }));
         await tx.todoAssignee.createMany({ data: assigneeData, skipDuplicates: true });
       }
 
-      // 4) Handle uploaded files
+      // Handle uploaded files
       if (req.files && Array.isArray(req.files)) {
-        const fileRecords = (req.files as Express.Multer.File[]).map((file) => ({
+        const fileRecords = (req.files as Express.Multer.File[]).map(file => ({
           filename: file.originalname,
           path: file.path,
           mimeType: file.mimetype,
@@ -67,7 +60,6 @@ export const createTodo = async (req: AuthRequest, res: Response, next: NextFunc
         await tx.file.createMany({ data: fileRecords });
       }
 
-      // 5) Return full todo with relations
       return await tx.todo.findUnique({
         where: { id: todo.id },
         include: {
@@ -137,15 +129,14 @@ export const getAssignedTodos = async (req: AuthRequest, res: Response, next: Ne
  */
 export const getTodoById = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const id = Number(req.params.id);
+    const todoId = Number(req.params.id);
     const userId = req.user?.userId;
-    const role = req.user?.role;
 
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
-    if (Number.isNaN(id)) return res.status(400).json({ error: 'Invalid id' });
+    if (Number.isNaN(todoId)) return res.status(400).json({ error: 'Invalid id' });
 
     const todo = await prisma.todo.findUnique({
-      where: { id },
+      where: { id: todoId },
       include: {
         creator: { select: { id: true, name: true, email: true } },
         assignee: { include: { user: { select: { id: true, name: true, email: true } } } },
@@ -156,10 +147,9 @@ export const getTodoById = async (req: AuthRequest, res: Response, next: NextFun
     if (!todo) return res.status(404).json({ error: 'Todo not found' });
 
     const isCreator = todo.creatorId === userId;
-    const isAssignee = todo.assignee.some((a) => a.userId === userId);
-    const isAdmin = role === 'ADMIN';
+    const isAssignee = todo.assignee.some(a => a.userId === userId);
 
-    if (!isCreator && !isAssignee && !isAdmin) return res.status(403).json({ error: 'Forbidden' });
+    if (!isCreator && !isAssignee) return res.status(403).json({ error: 'Forbidden' });
 
     res.json(todo);
   } catch (err) {
@@ -174,7 +164,6 @@ export const downloadFile = async (req: AuthRequest, res: Response, next: NextFu
   try {
     const fileId = Number(req.params.id);
     const userId = req.user?.userId;
-    const role = req.user?.role;
 
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
     if (Number.isNaN(fileId)) return res.status(400).json({ error: 'Invalid file id' });
@@ -190,9 +179,8 @@ export const downloadFile = async (req: AuthRequest, res: Response, next: NextFu
     const isUploader = file.uploaderId === userId;
     const isCreator = todo && todo.creatorId === userId;
     const isAssignee = todo && todo.assignee.some(a => a.userId === userId);
-    const isAdmin = role === 'ADMIN';
 
-    if (!isUploader && !isCreator && !isAssignee && !isAdmin) {
+    if (!isUploader && !isCreator && !isAssignee) {
       return res.status(403).json({ error: 'Forbidden' });
     }
 
@@ -201,6 +189,179 @@ export const downloadFile = async (req: AuthRequest, res: Response, next: NextFu
 
     const filename = file.filename || path.basename(filePath);
     return res.download(filePath, filename);
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * PATCH /api/todos/:id/status
+ */
+export const updateTodoStatus = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const todoId = Number(req.params.id);
+    const { status } = req.body;
+    const userId = req.user?.userId;
+
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+    if (!['TODO', 'IN_PROGRESS', 'DONE'].includes(status)) return res.status(400).json({ error: 'Invalid status' });
+
+    const todo = await prisma.todo.findUnique({
+      where: { id: todoId },
+      include: { assignee: true },
+    });
+
+    if (!todo) return res.status(404).json({ error: 'Todo not found' });
+
+    const isCreator = todo.creatorId === userId;
+    const isAssignee = todo.assignee.some(a => a.userId === userId);
+
+    if (!isCreator && !isAssignee) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    const updatedTodo = await prisma.todo.update({
+      where: { id: todoId },
+      data: { status },
+      include: { 
+        assignee: { include: { user: true } },
+        creator: true,
+        files: true,
+      },
+    });
+
+    const assigneeIds = updatedTodo.assignee.map(a => a.userId).filter(id => id !== userId);
+
+    if (assigneeIds.length > 0) {
+      const notifications = assigneeIds.map(uid => ({
+        userId: uid,
+        message: `Status changed to ${status} for "${updatedTodo.title}"`,
+        todoId: updatedTodo.id,
+      }));
+      await prisma.notification.createMany({ data: notifications });
+
+      try {
+        const io = getIO();
+        assigneeIds.forEach(uid => {
+          io.to(`user_${uid}`).emit('notification', {
+            message: `Status changed to ${status} for "${updatedTodo.title}"`,
+            todoId: updatedTodo.id,
+          });
+        });
+      } catch (err) {
+        console.warn('Socket.io not initialized. Skipping real-time notifications.');
+      }
+    }
+
+    res.json(updatedTodo);
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * PATCH /api/todos/order
+ */
+export const reorderTodos = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { orderedIds } = req.body;
+    const userId = req.user?.userId;
+
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+    if (!Array.isArray(orderedIds) || orderedIds.some((id: any) => Number.isNaN(Number(id)))) {
+      return res.status(400).json({ error: 'orderedIds must be array of ids' });
+    }
+
+    const todos = await prisma.todo.findMany({
+      where: { id: { in: orderedIds.map(Number) } },
+      include: { assignee: true },
+    });
+
+    const unauthorized = todos.some(t => {
+      const isCreator = t.creatorId === userId;
+      const isAssignee = t.assignee.some(a => a.userId === userId);
+      return !(isCreator || isAssignee);
+    });
+    if (unauthorized) return res.status(403).json({ error: 'Forbidden to reorder some todos' });
+
+    const updates = orderedIds.map((id: number, idx: number) =>
+      prisma.todo.update({ where: { id: Number(id) }, data: { order: idx } })
+    );
+    await prisma.$transaction(updates);
+
+    const updated = await prisma.todo.findMany({
+      where: { id: { in: orderedIds.map(Number) } },
+      orderBy: { order: 'asc' },
+      include: { creator: true, assignee: { include: { user: true } }, files: true },
+    });
+
+    res.json(updated);
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * GET /api/todos/status/:id
+ */
+export const getTodoStatus = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const todoId = Number(req.params.id);
+    const userId = req.user?.userId;
+
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+    if (Number.isNaN(todoId)) return res.status(400).json({ error: 'Invalid todo id' });
+
+    const todo = await prisma.todo.findUnique({
+      where: { id: todoId },
+      include: { creator: true, assignee: { include: { user: true } } },
+    });
+
+    if (!todo) return res.status(404).json({ error: 'Todo not found' });
+
+    const isCreator = todo.creatorId === userId;
+    const isAssignee = todo.assignee.some(a => a.user?.id === userId);
+
+    if (!isCreator && !isAssignee) return res.status(403).json({ error: 'Forbidden' });
+
+    res.json({
+      id: todo.id,
+      title: todo.title,
+      status: todo.status,
+      creator: todo.creator,
+      assignees: todo.assignee.map(a => a.user),
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * GET /api/todos/status
+ * Returns status for ALL todos in the system
+ */
+export const getAllTodoStatuses = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+    const todos = await prisma.todo.findMany({
+      include: {
+        creator: { select: { id: true, name: true, email: true } },
+        assignee: { include: { user: { select: { id: true, name: true, email: true } } } },
+        files: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    res.json(todos.map(todo => ({
+      id: todo.id,
+      title: todo.title,
+      status: todo.status,
+      creator: todo.creator,
+      assignees: todo.assignee.map(a => a.user),
+      files: todo.files,
+    })));
   } catch (err) {
     next(err);
   }

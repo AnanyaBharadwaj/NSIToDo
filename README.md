@@ -55,4 +55,6 @@ Use React Query or SWR for API requests
 Maintain consistent code formatting
 Run lint checks before pushing code
 Ensure environment variables are configured correctly
-Database migrations should be applied with every schema update
+Database migrations should be applied with every schema update 
+
+API Documentation--https://documenter.getpostman.com/view/48051536/2sB3QFPrKH

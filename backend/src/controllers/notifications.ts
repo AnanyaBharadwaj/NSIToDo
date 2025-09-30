@@ -1,4 +1,4 @@
-// backend/controllers/notifications.ts
+
 import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../../src/prisma';
 

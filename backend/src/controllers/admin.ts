@@ -1,4 +1,4 @@
-// backend/controllers/admin.ts
+
 import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../../src/prisma';
 

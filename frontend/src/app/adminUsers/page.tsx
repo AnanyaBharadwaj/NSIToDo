@@ -1,5 +1,4 @@
-// frontend/app/adminUsers/page.tsx
-"use client";
+
 
 import React from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -9,7 +8,7 @@ import { AdminUsers } from "@/components/AdminUsers";
 export default function AdminUsersPage() {
   return (
     <ProtectedRoute requiredRole="ADMIN">
-      <div className="min-h-screen bg-gray-50 text-black flex flex-col">
+      <div className="min-h-screen bg-blue-500 text-black flex flex-col">
         {/* Navbar */}
         <Navbar />
 

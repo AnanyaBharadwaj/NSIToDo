@@ -1,4 +1,4 @@
-// backend/src/controllers/todos.ts
+
 import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../prisma';
 import fs from 'fs';
@@ -9,9 +9,8 @@ interface AuthRequest extends Request {
   user?: { userId: number; role: string };
 }
 
-/**
- * CREATE Todo
- */
+ // CREATE Todo
+ 
 export const createTodo = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { title, description, dueDate } = req.body;
@@ -76,9 +75,9 @@ export const createTodo = async (req: AuthRequest, res: Response, next: NextFunc
   }
 };
 
-/**
- * GET /api/todos/my
- */
+
+ // GET /api/todos/my
+ 
 export const getMyTodos = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.user?.userId;
@@ -100,9 +99,9 @@ export const getMyTodos = async (req: AuthRequest, res: Response, next: NextFunc
   }
 };
 
-/**
- * GET /api/todos/assigned
- */
+
+ // GET /api/todos/assigned
+ 
 export const getAssignedTodos = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.user?.userId;
@@ -124,9 +123,7 @@ export const getAssignedTodos = async (req: AuthRequest, res: Response, next: Ne
   }
 };
 
-/**
- * GET /api/todos/:id
- */
+// GET /api/todos/:id
 export const getTodoById = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const todoId = Number(req.params.id);
@@ -157,9 +154,7 @@ export const getTodoById = async (req: AuthRequest, res: Response, next: NextFun
   }
 };
 
-/**
- * GET /api/todos/files/:id/download
- */
+// GET /api/todos/files/:id/download
 export const downloadFile = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const fileId = Number(req.params.id);
@@ -194,10 +189,7 @@ export const downloadFile = async (req: AuthRequest, res: Response, next: NextFu
   }
 };
 
-/**
- * PATCH /api/todos/:id/status
- * Broadcast status change notification to all users
- */
+// PATCH /api/todos/:id/status
 export const updateTodoStatus = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const todoId = Number(req.params.id);
@@ -264,9 +256,7 @@ export const updateTodoStatus = async (req: AuthRequest, res: Response, next: Ne
 };
 
 
-/**
- * PATCH /api/todos/order
- */
+// PATCH /api/todos/order
 export const reorderTodos = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { orderedIds } = req.body;
@@ -306,9 +296,7 @@ export const reorderTodos = async (req: AuthRequest, res: Response, next: NextFu
   }
 };
 
-/**
- * GET /api/todos/status/:id
- */
+// GET /api/todos/status/:id
 export const getTodoStatus = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const todoId = Number(req.params.id);
@@ -341,10 +329,7 @@ export const getTodoStatus = async (req: AuthRequest, res: Response, next: NextF
   }
 };
 
-/**
- * GET /api/todos/status
- * Returns status for ALL todos in the system
- */
+// GET /api/todos/status
 export const getAllTodoStatuses = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.user?.userId;

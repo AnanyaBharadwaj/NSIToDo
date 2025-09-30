@@ -1,4 +1,4 @@
-// frontend/app/files/page.tsx (or pages/files.tsx)
+
 "use client";
 import React from "react";
 import { useQuery } from "@tanstack/react-query";

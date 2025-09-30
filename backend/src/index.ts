@@ -5,7 +5,7 @@ const cors = require("cors");
 const dotenv = require("dotenv");
 dotenv.config();
 
-// Routes (CommonJS style)
+// Routes
 const authRoutes = require("./routes/auth").default;
 const userRoutes = require("./routes/users").default;
 const uploadRoutes = require("./routes/uploads").default;
@@ -61,7 +61,7 @@ app.get("/health", (_req: Request, res: Response) => {
   res.json({ ok: true, time: new Date().toISOString() });
 });
 
-// Error handler (must be last)
+// Error handler 
 app.use(errorHandler);
 
 // Create HTTP server and initialize Socket.IO

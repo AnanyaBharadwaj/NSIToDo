@@ -1,4 +1,4 @@
-// backend/controllers/files.ts
+
 import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../../src/prisma';
 import fs from 'fs';
@@ -42,5 +42,3 @@ export const getFiles = async (req: AuthRequest, res: Response, next: NextFuncti
   }
 };
 
-// Download already implemented in your todos controller route /api/todos/files/:id/download
-// Keep using that - it enforces access checks and streams disk file.

@@ -1,0 +1,32 @@
+         +---------------------+
+         |   Web Browser       |
+         +----------+----------+
+                    |
+                    v
+         +---------------------+
+         |   Next.js Frontend  |
+         |  - Pages & Routing  |
+         |  - Tailwind + shadcn/ui|
+         |  - React Query/SWR  |
+         |  - React Hook Form  |
+         +----------+----------+
+                    |
+                    v
+         +---------------------+
+         | Node.js Backend     |
+         | - Express API       |
+         | - Auth & Validation |
+         | - Controllers/Services|
+         | - Prisma ORM        |
+         | - File Upload Handling|
+         +----------+----------+
+          /          |           \
+         v           v            v
++----------------+ +----------------+ +----------------+
+| PostgreSQL DB  | | File Storage   | | Notifications  |
+| - users        | | Local          | | Stored in DB   |
+| - todos        | |                | | Retrieved via API|
+| - files        | +----------------+ | In-app Alerts  |
+| - todo_assignees|                  +----------------+
+| - notifications|
++----------------+

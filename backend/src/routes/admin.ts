@@ -1,4 +1,4 @@
-// backend/routes/admin.ts
+
 import { Router } from 'express';
 import { getAllUsersForAdmin, setUserStatus } from '../controllers/admin';
 import { authMiddleware as auth, adminMiddleware } from '../middlewares/auth';

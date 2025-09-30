@@ -1,4 +1,4 @@
-// backend/routes/notifications.ts
+
 import { Router } from 'express';
 import { getNotifications, markNotificationRead } from '../controllers/notifications';
 import { authMiddleware as auth } from '../middlewares/auth';

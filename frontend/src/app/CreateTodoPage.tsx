@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import api from '../lib/api';
 
@@ -12,15 +12,15 @@ interface TodoFormProps {
   onSuccess: () => void;
 }
 
-export const TodoForm: React.FC<TodoFormProps> = ({ users, onSuccess }) => {
+const TodoForm: React.FC<TodoFormProps> = ({ users, onSuccess }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [selectedAssignees, setSelectedAssignees] = useState<number[]>([]);
 
-  const handleToggleAssignee = (id: number) => {
-    setSelectedAssignees((prev) =>
-      prev.includes(id) ? prev.filter((uid) => uid !== id) : [...prev, id]
+  const toggleAssignee = (id: number) => {
+    setSelectedAssignees(prev =>
+      prev.includes(id) ? prev.filter(aid => aid !== id) : [...prev, id]
     );
   };
 
@@ -38,12 +38,12 @@ export const TodoForm: React.FC<TodoFormProps> = ({ users, onSuccess }) => {
       await api.post('/todos', payload);
       onSuccess();
 
-      // Reset form
+      // reset form
       setTitle('');
       setDescription('');
       setDueDate('');
       setSelectedAssignees([]);
-    } catch (err) {
+    } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
         alert(err.response?.data?.error || 'Error creating todo');
       } else if (err instanceof Error) {
@@ -55,49 +55,47 @@ export const TodoForm: React.FC<TodoFormProps> = ({ users, onSuccess }) => {
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="space-y-4 border border-blue-300 p-6 rounded shadow-md w-full max-w-md"
-    >
+    <form onSubmit={handleSubmit} className="space-y-4 max-w-md">
       <div>
-        <label className="block font-bold underline">Title</label>
+        <label className="block font-semibold">Title</label>
         <input
           type="text"
           value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          className="border rounded w-full p-2 mt-1"
+          onChange={e => setTitle(e.target.value)}
+          className="border rounded w-full p-2"
           required
         />
       </div>
 
       <div>
-        <label className="block font-bold underline">Description</label>
+        <label className="block font-semibold">Description</label>
         <textarea
           value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          className="border rounded w-full p-2 mt-1"
+          onChange={e => setDescription(e.target.value)}
+          className="border rounded w-full p-2"
         />
       </div>
 
       <div>
-        <label className="block font-bold underline">Due Date</label>
+        <label className="block font-semibold">Due Date</label>
         <input
           type="date"
           value={dueDate}
-          onChange={(e) => setDueDate(e.target.value)}
-          className="border rounded w-full p-2 mt-1"
+          onChange={e => setDueDate(e.target.value)}
+          className="border rounded w-full p-2"
         />
       </div>
 
       <div>
-        <label className="block font-bold underline">Assign To</label>
+        <label className="block font-semibold">Assign To</label>
         <div className="flex flex-wrap gap-2 mt-1">
-          {users.map((user) => (
+          {users.length === 0 && <p className="text-gray-500">No users available</p>}
+          {users?.map(user => (
             <label key={user.id} className="flex items-center gap-1">
               <input
                 type="checkbox"
                 checked={selectedAssignees.includes(user.id)}
-                onChange={() => handleToggleAssignee(user.id)}
+                onChange={() => toggleAssignee(user.id)}
               />
               {user.name}
             </label>
@@ -115,18 +113,31 @@ export const TodoForm: React.FC<TodoFormProps> = ({ users, onSuccess }) => {
   );
 };
 
-export const CreateTodoPage: React.FC = () => {
+const CreateTodoPage: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const response = await api.get<User[]>('/users');
-        setUsers(response.data);
+        const response = await api.get('/users');
+
+        // normalize response: either array or { users: [...] }
+        const usersArray = Array.isArray(response.data)
+          ? response.data
+          : Array.isArray(response.data.users)
+          ? response.data.users
+          : [];
+
+        setUsers(usersArray);
       } catch (err) {
         console.error('Error fetching users', err);
+        setUsers([]);
+      } finally {
+        setLoading(false);
       }
     };
+
     fetchUsers();
   }, []);
 
@@ -135,13 +146,9 @@ export const CreateTodoPage: React.FC = () => {
   };
 
   return (
-    <div className="flex justify-center items-center min-h-screen bg-gray-50 p-4">
-      <div className="w-full max-w-lg">
-        <h1 className="text-2xl font-bold mb-6 text-center underline">
-          Create Todo
-        </h1>
-        <TodoForm onSuccess={handleSuccess} users={users} />
-      </div>
+    <div className="p-4">
+      <h1 className="text-2xl font-bold mb-4">Create Todo</h1>
+      {loading ? <p>Loading users...</p> : <TodoForm users={users} onSuccess={handleSuccess} />}
     </div>
   );
 };

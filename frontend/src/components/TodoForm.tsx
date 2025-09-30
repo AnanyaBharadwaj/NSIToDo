@@ -19,13 +19,13 @@ interface TodoFormProps {
   users: { id: number; name: string }[];
 }
 
-export const TodoForm: React.FC<TodoFormProps> = ({ onSuccess, users }) => {
+export const TodoForm: React.FC<TodoFormProps> = ({ onSuccess, users = [] }) => {
   const { register, handleSubmit, setValue, watch } = useForm<TodoFormInputs>();
   const queryClient = useQueryClient();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
-  const files = watch("files");
+  const files = watch("files") ?? new DataTransfer().files; // ensure files is always iterable
 
   const mutation = useMutation<Todo, Error, TodoFormInputs>({
     mutationFn: async (data: TodoFormInputs) => {
@@ -34,7 +34,10 @@ export const TodoForm: React.FC<TodoFormProps> = ({ onSuccess, users }) => {
       if (data.description) formData.append("description", data.description);
       if (data.dueDate) formData.append("dueDate", data.dueDate);
       formData.append("assignees", JSON.stringify(data.assignees));
-      Array.from(data.files).forEach((file) => formData.append("files", file));
+
+      if (data.files) {
+        Array.from(data.files).forEach((file) => formData.append("files", file));
+      }
 
       const response = await api.post<Todo>("/todos", formData, {
         headers: { "Content-Type": "multipart/form-data" },
@@ -106,11 +109,12 @@ export const TodoForm: React.FC<TodoFormProps> = ({ onSuccess, users }) => {
           multiple
           className="border border-gray-300 rounded p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg"
         >
-          {users.map((user) => (
-            <option key={user.id} value={user.id}>
-              {user.name}
-            </option>
-          ))}
+          {Array.isArray(users) &&
+            users.map((user) => (
+              <option key={user.id} value={user.id}>
+                {user.name}
+              </option>
+            ))}
         </select>
       </div>
 
@@ -124,7 +128,7 @@ export const TodoForm: React.FC<TodoFormProps> = ({ onSuccess, users }) => {
         onDragLeave={handleDragLeave}
         onClick={() => fileInputRef.current?.click()}
       >
-        {files && files.length > 0 ? (
+        {files && Array.from(files).length > 0 ? (
           Array.from(files).map((f, i) => (
             <p key={i} className="text-gray-800">
               {f.name}
@@ -146,10 +150,10 @@ export const TodoForm: React.FC<TodoFormProps> = ({ onSuccess, users }) => {
       {/* Submit Button */}
       <button
         type="submit"
-        disabled={mutation.status === "pending"}
+        disabled={mutation.isPending}
         className="w-full bg-blue-600 text-white p-4 rounded hover:bg-blue-700 transition text-lg font-medium"
       >
-        {mutation.status === "pending" ? "Creating..." : "Create Todo"}
+        {mutation.isPending? "Creating..." : "Create Todo"}
       </button>
 
       {mutation.isError && <p className="text-red-500">{mutation.error?.message}</p>}

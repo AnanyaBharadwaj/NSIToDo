@@ -55,39 +55,42 @@ export const TodoForm: React.FC<TodoFormProps> = ({ users, onSuccess }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 max-w-md">
+    <form
+      onSubmit={handleSubmit}
+      className="space-y-4 border border-blue-300 p-6 rounded shadow-md w-full max-w-md"
+    >
       <div>
-        <label className="block font-semibold">Title</label>
+        <label className="block font-bold underline">Title</label>
         <input
           type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          className="border rounded w-full p-2"
+          className="border rounded w-full p-2 mt-1"
           required
         />
       </div>
 
       <div>
-        <label className="block font-semibold">Description</label>
+        <label className="block font-bold underline">Description</label>
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          className="border rounded w-full p-2"
+          className="border rounded w-full p-2 mt-1"
         />
       </div>
 
       <div>
-        <label className="block font-semibold">Due Date</label>
+        <label className="block font-bold underline">Due Date</label>
         <input
           type="date"
           value={dueDate}
           onChange={(e) => setDueDate(e.target.value)}
-          className="border rounded w-full p-2"
+          className="border rounded w-full p-2 mt-1"
         />
       </div>
 
       <div>
-        <label className="block font-semibold">Assign To</label>
+        <label className="block font-bold underline">Assign To</label>
         <div className="flex flex-wrap gap-2 mt-1">
           {users.map((user) => (
             <label key={user.id} className="flex items-center gap-1">
@@ -132,9 +135,13 @@ export const CreateTodoPage: React.FC = () => {
   };
 
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-bold mb-4">Create Todo</h1>
-      <TodoForm onSuccess={handleSuccess} users={users} />
+    <div className="flex justify-center items-center min-h-screen bg-gray-50 p-4">
+      <div className="w-full max-w-lg">
+        <h1 className="text-2xl font-bold mb-6 text-center underline">
+          Create Todo
+        </h1>
+        <TodoForm onSuccess={handleSuccess} users={users} />
+      </div>
     </div>
   );
 };

@@ -1,3 +1,4 @@
+// backend/routes/todos.ts
 import { Router } from 'express';
 import { upload } from '../middlewares/upload';
 import {
@@ -15,7 +16,7 @@ import { authMiddleware as auth } from '../middlewares/auth';
 
 const router = Router();
 
-// Create a new todo (optional file upload)
+// Create a new todo (with optional file upload)
 router.post('/', auth, upload.array('files'), createTodo);
 
 // Get todos created by the logged-in user
@@ -24,8 +25,8 @@ router.get('/my', auth, getMyTodos);
 // Get todos assigned to the logged-in user
 router.get('/assigned', auth, getAssignedTodos);
 
-// Get all todos with status for the logged-in user
-router.get('/status', auth, getAllTodoStatuses); // <-- place before /:id/status to avoid conflicts
+// Get all todos with status (for logged-in user)
+router.get('/status', auth, getAllTodoStatuses); // must come before /:id/status
 
 // Get status of a single todo
 router.get('/:id/status', auth, getTodoStatus);

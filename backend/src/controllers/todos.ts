@@ -196,6 +196,7 @@ export const downloadFile = async (req: AuthRequest, res: Response, next: NextFu
 
 /**
  * PATCH /api/todos/:id/status
+ * Broadcast status change notification to all users
  */
 export const updateTodoStatus = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
@@ -204,7 +205,9 @@ export const updateTodoStatus = async (req: AuthRequest, res: Response, next: Ne
     const userId = req.user?.userId;
 
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
-    if (!['TODO', 'IN_PROGRESS', 'DONE'].includes(status)) return res.status(400).json({ error: 'Invalid status' });
+    if (!['TODO', 'IN_PROGRESS', 'DONE'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
 
     const todo = await prisma.todo.findUnique({
       where: { id: todoId },
@@ -215,40 +218,41 @@ export const updateTodoStatus = async (req: AuthRequest, res: Response, next: Ne
 
     const isCreator = todo.creatorId === userId;
     const isAssignee = todo.assignee.some(a => a.userId === userId);
+    if (!isCreator && !isAssignee) return res.status(403).json({ error: 'Forbidden' });
 
-    if (!isCreator && !isAssignee) {
-      return res.status(403).json({ error: 'Forbidden' });
-    }
-
+    // Update status
     const updatedTodo = await prisma.todo.update({
       where: { id: todoId },
       data: { status },
-      include: { 
+      include: {
         assignee: { include: { user: true } },
         creator: true,
         files: true,
       },
     });
 
-    const assigneeIds = updatedTodo.assignee.map(a => a.userId).filter(id => id !== userId);
+    // Get ALL users in the system
+    const allUsers = await prisma.user.findMany({ select: { id: true } });
 
-    if (assigneeIds.length > 0) {
-      const notifications = assigneeIds.map(uid => ({
-        userId: uid,
-        message: `Status changed to ${status} for "${updatedTodo.title}"`,
-        todoId: updatedTodo.id,
-      }));
-      await prisma.notification.createMany({ data: notifications });
+    if (allUsers.length > 0) {
+      const notifications = await Promise.all(
+        allUsers.map(u =>
+          prisma.notification.create({
+            data: {
+              userId: u.id,
+              todoId: updatedTodo.id,
+              message: `Status changed to ${status} for "${updatedTodo.title}"`,
+            },
+          })
+        )
+      );
 
       try {
         const io = getIO();
-        assigneeIds.forEach(uid => {
-          io.to(`user_${uid}`).emit('notification', {
-            message: `Status changed to ${status} for "${updatedTodo.title}"`,
-            todoId: updatedTodo.id,
-          });
+        notifications.forEach(note => {
+          io.to(`user_${note.userId}`).emit('notification', note);
         });
-      } catch (err) {
+      } catch {
         console.warn('Socket.io not initialized. Skipping real-time notifications.');
       }
     }
@@ -258,6 +262,7 @@ export const updateTodoStatus = async (req: AuthRequest, res: Response, next: Ne
     next(err);
   }
 };
+
 
 /**
  * PATCH /api/todos/order
